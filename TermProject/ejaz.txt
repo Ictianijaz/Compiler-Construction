@@ -1,0 +1,19 @@
+StartProgram
+InitBlock:
+int a,b,c, f;
+float e,g;
+CodeBlock:
+switch (g):
+{
+case (g <= c):
+ c = b*c/g; 
+case (g < f):
+c = c+e-a;
+default:
+c = c/a*e;
+}
+output(c);
+forLoop (c=0; c<=f; c++;)
+f = g-c+a;
+endLoop
+EndProgram

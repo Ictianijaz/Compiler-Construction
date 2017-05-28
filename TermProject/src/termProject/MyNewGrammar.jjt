@@ -1,0 +1,344 @@
+/**
+ * JJTree template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */options{  static = true;}PARSER_BEGIN(MyNewGrammar)package termProject;
+import java.io.*;
+
+public class MyNewGrammar{
+  static int count = 0;
+  static MySymbolTable sym = new MySymbolTable();
+  static SemanticAnalyzer sa = new SemanticAnalyzer();
+  static TreeTraversal tt = new TreeTraversal();
+  static IRGeneration ir = new IRGeneration();  public static void main(String args []) throws ParseException, FileNotFoundException  {    System.out.println("Reading from file...");        new MyNewGrammar(new FileInputStream("ejaz.txt"));    try    {
+      System.out.println("\nMessages of parser\n");      SimpleNode n = MyNewGrammar.Start();
+      System.out.println("\nVariables\n");
+      sym.show();
+      System.out.println("\nMessages of semantic analyzer\n");
+      sa.typeChecking(n);
+      System.out.println("\nAST\n");      n.dump("");
+      System.out.println("\nIR Generation\n"+ir.InterMedCode(n));
+      //System.out.println("\nTree Traversal Testing\n");
+      //tt.treeTraversalTest(n);       System.out.println("\nThank you.");    }    catch (Exception e)    {      System.out.println("Oops.");      System.out.println(e.getMessage());    }  }}PARSER_END(MyNewGrammar)SKIP :{  " "| "\t"| "\n"| "\r"| < "//" (~[ "\n", "\r" ])*    (      "\n"    | "\r"    | "\r\n"    ) >| < "/*" (~[ "*" ])* "*"    (      ~[ "/" ] (~[ "*" ])* "*"    )*    "/" >}
+/* COMMON TOEKNS AND KEYWORDS */
+TOKEN:
+{
+  < INT:"int">
+| < FLOAT:"float">
+| < SWITCH:"switch">
+| < CASE:"case">
+| < DEFALT:"default">
+| < OUTPUT:"output">
+| < FORLOOP:"forLoop">
+| < ENDLOOP:"endLoop">
+| < STPRO:"StartProgram">
+| < EDPRO:"EndProgram">
+| < INITBLOCK:"InitBlock:">
+| < CODEBLOCK:"CodeBlock:">
+| < COMMA:",">
+| < PLUS:"+">
+| < MUL:"*">
+| < MINUS:"-">
+| < DIVIDE:"/">
+| < GE:">=">
+| < LE:"<=">
+| < EQ:"==">
+| < LT:"<">
+| < GT:">">
+| < ASSIGN:"=">
+| < SEMICOLON:";">
+| < COLON:":">
+|  < INCREAMENT:"++">
+| < DECREAMENT:"--">
+}
+/* INDENTIFIERS AND OTHER IMPORTANT TOKENS */TOKEN : {  < IDENTIFIER :    < LETTER1 >    (      < LETTER1 >    | < DIGIT >    )* >
+| < DECIMAL:< INTEGER>("."< INTEGER>)?>
+| < INTEGER:(<DIGIT>)+>
+| < STRING:< QUOTE>(< LETTER>)+< QUOTE>>
+| < QUOTE:"\"">
+| < #LETTER: [" ", "a"-"z", "A"-"Z"]>| < #LETTER1 : [ "_", "a"-"z", "A"-"Z" ] >| < #DIGIT : [ "0"-"9" ] >}SimpleNode Start() :{}{  < STPRO>
+  initBlock()
+  codeBlock()
+  < EDPRO>  {    return jjtThis;  }}void initBlock():
+{}
+{
+  < INITBLOCK>
+  (    declaration()
+  )+}
+void declaration():
+{}
+{
+  integerSect()
+|
+  floatSect()
+}
+void integerSect():
+{
+ Token t;
+}
+{
+  
+  t=< INT>
+  { jjtThis.value = t.image;}
+   identifier("int") (initialization("int"))?
+  (
+    < COMMA>
+    (
+      identifier("int") (initialization("int"))?    )  )*
+  < SEMICOLON>
+}
+void floatSect():
+{
+ Token t;
+}
+{
+  t=< FLOAT>
+  { jjtThis.value = t.image;}
+   identifier("float") (initialization("float"))?
+  (
+    < COMMA>
+    (
+      identifier("float") (initialization("float"))?
+    )
+  )*
+  < SEMICOLON>
+}
+void identifier(String type):
+{
+ Token t;
+ }
+{
+  t=< IDENTIFIER>
+  {
+    if (type.equals("int"))
+    {
+      jjtThis.value = t.image;
+      jjtThis.setType("int");
+      if(sym.checkValue(t.image))
+      {
+         System.out.println(t.image + " is already Declared");
+      }
+      else
+      { 
+        sym.put(("ID" + count++), "int " + t.image);
+      }
+    }
+    else if (type.equals("float"))
+    {
+      jjtThis.value = t.image;
+      jjtThis.setType("float");
+      if(sym.checkValue(t.image))
+      {
+         System.out.println(t.image + " is already Declared");
+      }
+      else
+      { 
+        sym.put(("ID" + count++), "float " + t.image);
+      }
+    }
+    else
+    {
+      jjtThis.value = t.image;
+      String valueType = sym.fetchType(t.image);
+      if (valueType != null)
+      {
+        if (valueType.equals("int"))
+        {
+          jjtThis.setType("int");
+        }
+        else if (valueType.equals("float"))
+        {
+          jjtThis.setType("float");
+        }
+      }
+      if(sym.checkValue(t.image))
+      {
+         System.out.println(t.image + " is declared");
+      }
+      else
+      { 
+        System.out.println(t.image + " is not declared");
+      }
+    }
+  }}void initialization(String type):
+{
+ Token t;
+}
+{
+  t=< ASSIGN> { jjtThis.value = t.image;}
+  constant()
+}
+void constant():
+{
+ Token t;
+}
+{
+  t=<INTEGER> { jjtThis.value = t.image;}
+ | t=< DECIMAL> { jjtThis.value = t.image;}
+}
+void codeBlock():
+{}
+{
+  < CODEBLOCK>
+  switchSect()
+  outputSect()
+  forSect()
+}
+void switchSect():
+{
+ Token t;
+}
+{
+  t=< SWITCH> { jjtThis.value = t.image;} "(" identifier("") ")" < COLON> switchBody()
+}
+void switchBody():{}
+{
+  "{"
+  (caseSect())+
+  defaultSect()
+  "}"
+}
+void defaultSect():
+{
+  Token t;
+}
+{
+  t=< DEFALT> { jjtThis.value = t.image;}< COLON> (assignmentStatement() < SEMICOLON>)+
+}
+void caseSect():
+{
+ Token t;
+}
+{
+  t=< CASE> { jjtThis.value = t.image;} "(" condStatement() ")"  < COLON> (assignmentStatement() < SEMICOLON>)+
+}
+void condStatement():
+{}
+{
+  identifier("") condOp() identifier("")
+}
+void condOp():
+{
+Token t;
+}
+{
+   t=< GT> { jjtThis.value = t.image;}
+ | t=< GE>{ jjtThis.value = t.image;}
+ | t=< LT>{ jjtThis.value = t.image;}
+ | t=< LE>{ jjtThis.value = t.image;}
+ | t=< EQ>{ jjtThis.value = t.image;}
+}
+void assignmentStatement():
+{
+ Token t;
+}
+{
+ LHS() t=< ASSIGN>{ jjtThis.value = t.image;} RHS()
+}
+void LHS():
+{}
+{
+  identifier("")
+}
+void RHS():
+{}
+{
+ additionOperation()
+}
+void additionOperation() :
+{}
+{
+  multiplicationOperation()
+  (
+   intermediateAddition()
+  )*
+}
+void intermediateAddition():
+{
+  Token t;
+}
+{
+   (
+      t = < PLUS >
+      {
+        jjtThis.value = t.image;
+        jjtThis.setType("ADDOP");
+      }
+    | t = < MINUS >
+      {
+        jjtThis.value = t.image;
+        jjtThis.setType("SUBOP");
+      }
+    )
+     multiplicationOperation()  
+}
+void  multiplicationOperation() :
+{}
+{
+  identCons()
+  (
+    intermediateMultiplication()
+  )*
+}
+void intermediateMultiplication():
+{
+  Token t;
+}
+{
+  (
+      t = < MUL >
+      {
+        jjtThis.value = t.image;
+        jjtThis.setType("MULOP");
+      }
+    | t = < DIVIDE >
+      {
+        jjtThis.value = t.image;
+        jjtThis.setType("DIVOP");
+      }
+    )
+    identCons()
+}
+void identCons():
+{}
+{
+  identifier("") | constant()
+}
+void outputSect():
+{
+ Token t;
+ }
+{
+  t=< OUTPUT>{ jjtThis.value = t.image;} "(" identifier("") ")" < SEMICOLON>
+}
+void forSect():
+{
+ Token t;
+}
+{
+  t=< FORLOOP>{ jjtThis.value = t.image;}
+  "(" declare() < SEMICOLON> condStatement() < SEMICOLON> InDeOperation() < SEMICOLON> ")"
+  forBody()
+  < ENDLOOP>  
+}
+void forBody():
+{}
+{
+  (assignmentStatement() < SEMICOLON>)+
+}
+void declare():
+{}
+{
+  identifier("") initialization("")
+}
+void InDeOperation():
+{}
+{
+ identifier("") InDeOperator()
+}
+void InDeOperator():
+{
+ Token t;
+}
+{
+ t=< INCREAMENT>{ jjtThis.value = t.image;}
+| t=< DECREAMENT>{ jjtThis.value = t.image;}
+}
